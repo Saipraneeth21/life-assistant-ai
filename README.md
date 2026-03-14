@@ -6,6 +6,12 @@ A personal AI assistant for daily planning, task management, and reminders — b
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square)
 
+## Screenshots
+
+| Welcome Screen | Chat View |
+|---|---|
+| ![Welcome](screenshots/welcome.png) | ![Chat](screenshots/chat.png) |
+
 ## Features
 
 - **Daily Planning** — Ask for a structured plan for your day
