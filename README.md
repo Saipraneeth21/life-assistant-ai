@@ -1,8 +1,8 @@
 # Life Assistant AI
 
-A personal AI assistant for daily planning, task management, and reminders — built with Next.js and Claude.
+A personal AI assistant for daily planning, task management, and reminders — built with Next.js, Groq (Llama 3), and Supabase.
 
-![Life Assistant AI](https://img.shields.io/badge/Powered%20by-Claude%20AI-c8a96e?style=flat-square)
+![Life Assistant AI](https://img.shields.io/badge/Powered%20by-Groq%20Llama%203-f55036?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square)
 
@@ -20,7 +20,7 @@ A personal AI assistant for daily planning, task management, and reminders — b
 |-------|-----------|
 | Frontend | Next.js 15, React, TypeScript |
 | Styling | Custom CSS (dark theme) |
-| AI | Anthropic Claude (claude-sonnet-4-6) |
+| AI | Groq (Llama 3 – llama-3.3-70b-versatile) |
 | Database | Supabase (PostgreSQL) |
 | Fonts | DM Serif Display, DM Sans |
 
@@ -49,7 +49,7 @@ cp .env.local.example .env.local
 
 | Variable | Where to get it |
 |----------|----------------|
-| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) |
+| `GROQ_API_KEY` | [console.groq.com](https://console.groq.com) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project settings |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project settings |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase project settings |
@@ -96,7 +96,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ```
 src/
 ├── app/
-│   ├── api/chat/route.ts   # Claude API + tool execution
+│   ├── api/chat/route.ts   # Groq API + tool execution
 │   ├── globals.css         # Dark theme styles
 │   ├── layout.tsx          # Root layout with fonts
 │   └── page.tsx            # Entry point
@@ -104,9 +104,25 @@ src/
 │   └── ChatWindow.tsx      # Full UI (sidebar + chat)
 ├── lib/
 │   ├── supabase.ts         # Database helpers
-│   └── tools.ts            # Claude tool definitions
+│   └── tools.ts            # Groq tool definitions
 └── types/
     └── index.ts            # Shared TypeScript types
+```
+
+## Architecture
+
+```
+User
+ ↓
+Next.js Chat UI
+ ↓
+API Route (/api/chat)
+ ↓
+Groq Llama 3 API
+ ↓
+Supabase Database
+ ↓
+Response streamed back to UI
 ```
 
 ## License
