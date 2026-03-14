@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Groq from "groq-sdk";
 import { NextRequest } from "next/server";
 import { LIFE_ASSISTANT_TOOLS, SYSTEM_PROMPT } from "@/lib/tools";
 import {
@@ -10,17 +10,16 @@ import {
   getReminders,
 } from "@/lib/supabase";
 
-// Placeholder user ID until auth is added
 const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001";
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY as string,
+const client = new Groq({
+  apiKey: process.env.GROQ_API_KEY as string,
 });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const messages: { role: "user" | "assistant"; content: string }[] =
+    const userMessages: { role: "user" | "assistant"; content: string }[] =
       body.messages || [];
 
     const encoder = new TextEncoder();
@@ -33,53 +32,55 @@ export async function POST(req: NextRequest) {
         };
 
         try {
-          let currentMessages: Anthropic.MessageParam[] = messages.map(
-            (m) => ({ role: m.role, content: m.content })
-          );
+          const currentMessages: Groq.Chat.ChatCompletionMessageParam[] =
+            userMessages.map((m) => ({ role: m.role, content: m.content }));
 
-          // Agentic loop: keep going until no more tool calls
+          // Agentic loop
           while (true) {
-            const response = await client.messages.create({
-              model: "claude-3-5-sonnet-latest",
+            const response = await client.chat.completions.create({
+              model: "llama-3.3-70b-versatile",
               max_tokens: 1024,
-              system: SYSTEM_PROMPT,
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                ...currentMessages,
+              ],
               tools: LIFE_ASSISTANT_TOOLS,
-              messages: currentMessages,
+              tool_choice: "auto",
             });
 
-            let hasToolUse = false;
-            const toolResults: Anthropic.ToolResultBlockParam[] = [];
+            const message = response.choices[0].message;
+            const toolCalls = message.tool_calls;
 
-            for (const block of response.content) {
-              if (block.type === "text") {
-                send(block.text);
-              } else if (block.type === "tool_use") {
-                hasToolUse = true;
-                let result: unknown;
-                try {
-                  result = await executeTool(
-                    block.name,
-                    block.input as Record<string, unknown>
-                  );
-                } catch (err) {
-                  result = { error: String(err) };
-                }
-                toolResults.push({
-                  type: "tool_result",
-                  tool_use_id: block.id,
-                  content: JSON.stringify(result),
-                });
-              }
+            if (!toolCalls || toolCalls.length === 0) {
+              send(message.content ?? "");
+              break;
             }
 
-            if (!hasToolUse) break;
+            // Push assistant message with tool calls
+            currentMessages.push({
+              role: "assistant",
+              content: message.content ?? "",
+              tool_calls: toolCalls,
+            } as Groq.Chat.ChatCompletionAssistantMessageParam);
 
-            // Feed tool results back and continue
-            currentMessages = [
-              ...currentMessages,
-              { role: "assistant", content: response.content },
-              { role: "user", content: toolResults },
-            ];
+            // Execute each tool and collect results
+            for (const toolCall of toolCalls) {
+              let result: unknown;
+              try {
+                result = await executeTool(
+                  toolCall.function.name,
+                  JSON.parse(toolCall.function.arguments)
+                );
+              } catch (err) {
+                result = { error: String(err) };
+              }
+
+              currentMessages.push({
+                role: "tool",
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(result),
+              } as Groq.Chat.ChatCompletionToolMessageParam);
+            }
           }
         } catch (err) {
           send(`Error: ${String(err)}`);
@@ -134,7 +135,7 @@ async function executeTool(
       return addReminder(userId, {
         title: input.title as string,
         remind_at: input.remind_at as string,
-        recurring: input.recurring as "daily" | "weekly" | undefined,
+        recurring: (input.recurring === "none" ? undefined : input.recurring) as "daily" | "weekly" | undefined,
       });
     case "list_reminders":
       return getReminders(userId);
